@@ -12,13 +12,11 @@
     },
     "types": "lib/index.d.ts",
     "scripts": {
-        "prebuild": "pnpm run build:worklet",
         "build": "tsc",
         "lint": "publint",
         "build:dockerimage": "docker image inspect -f '.' emscripten-autotools-4.0.4 || docker build -t emscripten-autotools-4.0.4 .",
         "build:emscripten": "docker run --rm -v $(pwd):/src emscripten-autotools-4.0.4 bash -x ./build.sh",
         "build:worklet": "webpack --config webpack.worklet.config.js",
-        "build:rollup": " rollup -c rollup.config.cjs",
         "build:rnnoise": "pnpm run build:dockerimage && pnpm run build:emscripten"
     },
     "files": [
