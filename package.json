@@ -6,6 +6,11 @@
         "type": "git",
         "url": "git+https://github.com/dadadah/denoise-plugin.git"
     },
+    "type": "module",
+    "exports": {
+        ".": "./lib/index.js"
+    },
+    "types": "lib/index.d.ts",
     "scripts": {
         "build": "npm run build:dockerimage && npm run build:emscripten && npm run build:js",
         "lint": "publint",
