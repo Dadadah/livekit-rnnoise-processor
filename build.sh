@@ -57,10 +57,10 @@ echo "============================================="
     .libs/librnnoise.${SO_SUFFIX} \
     -o ./$ENTRY_POINT
 
-  rm -rf ../src/dist
-  mkdir -p ../src/dist
+  rm -rf ../worklet/dist
+  mkdir -p ../worklet/dist
 
-  mv $ENTRY_POINT ../src/dist/
+  mv $ENTRY_POINT ../worklet/dist/
 )
 echo "============================================="
 echo "Compiling wasm bindings done"

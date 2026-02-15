@@ -5,10 +5,10 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 export default {
-    entry: "./src/DenoiserWorklet.ts",
+    entry: "./worklet/DenoiserWorklet.ts",
     output: {
         filename: "DenoiserWorklet.js",
-        path: path.resolve(__dirname, "lib"),
+        path: path.resolve(__dirname, "dist"),
     },
     resolve: {
         extensions: [".ts", ".js"],
