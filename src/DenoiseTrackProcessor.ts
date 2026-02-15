@@ -93,16 +93,8 @@ export class DenoiseTrackProcessor
         const ctx = this.audioOpts.audioContext
 
         if (!DenoiseTrackProcessor.loadedContexts.has(ctx)) {
-            // Load this from cdn instead of rolling it up
-            const blob = new Blob(["./DenoiserWorklet.js"], { type: "application/javascript" })
-            const url = URL.createObjectURL(blob)
-
-            try {
-                await ctx.audioWorklet.addModule(url)
-                DenoiseTrackProcessor.loadedContexts.add(ctx)
-            } finally {
-                URL.revokeObjectURL(url)
-            }
+            await ctx.audioWorklet.addModule(new URL("./DenoiserWorklet.js"));
+            DenoiseTrackProcessor.loadedContexts.add(ctx);
         }
 
         // process node
