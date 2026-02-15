@@ -16,7 +16,7 @@
         "lint": "publint",
         "build:dockerimage": "docker image inspect -f '.' emscripten-autotools-4.0.4 || docker build -t emscripten-autotools-4.0.4 .",
         "build:emscripten": "docker run --rm -v $(pwd):/src emscripten-autotools-4.0.4 bash -x ./build.sh",
-        "build:rnnoise": "npm run build:dockerimage && npm run build:emscripten"
+        "build:rnnoise": "pnpm run build:dockerimage && pnpm run build:emscripten"
     },
     "files": [
         "lib",
