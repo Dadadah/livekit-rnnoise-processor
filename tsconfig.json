@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "moduleResolution": "node",
   },
-  "exclude": ["node_modules", "dist", "./worklet"]
+  "exclude": ["node_modules", "dist", "lib", "./worklet", "webpack.*"]
 }
