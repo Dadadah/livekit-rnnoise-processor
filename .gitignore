@@ -1,4 +1,4 @@
-/dist
+dist/
 node_modules
 *.d
 *.slo
@@ -24,3 +24,4 @@ node_modules
 .npmrc
 libs
 DeepFilterNet/
+src/dist
