@@ -3,8 +3,6 @@ import type { AudioProcessorOptions, Room, TrackProcessor } from "livekit-client
 import { DenoiseOptions } from "./options"
 export type DenoiseFilterOptions = DenoiseOptions
 
-const DenoiserWorkletCode = process.env.DENOISER_WORKLET
-
 export class DenoiseTrackProcessor
     implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions>
 {
@@ -83,7 +81,7 @@ export class DenoiseTrackProcessor
     }
 
     async _initInternal(opts: AudioProcessorOptions, restart: boolean): Promise<void> {
-        if (!opts || !opts.audioContext || !opts.track || !DenoiserWorkletCode) {
+        if (!opts || !opts.audioContext || !opts.track) {
             throw new Error("audioContext and track are required")
         }
 
@@ -95,11 +93,8 @@ export class DenoiseTrackProcessor
         const ctx = this.audioOpts.audioContext
 
         if (!DenoiseTrackProcessor.loadedContexts.has(ctx)) {
-            if (this.filterOpts?.debugLogs) {
-                console.log("DenoiserWorkletCode:", DenoiserWorkletCode.length)
-            }
-
-            const blob = new Blob([DenoiserWorkletCode], { type: "application/javascript" })
+            // Load this from cdn instead of rolling it up
+            const blob = new Blob(["https://cdn.jsdelivr.net/gh/dadadah/denoise-plugin@main/dist/DenoiserWorklet.js"], { type: "application/javascript" })
             const url = URL.createObjectURL(blob)
 
             try {
