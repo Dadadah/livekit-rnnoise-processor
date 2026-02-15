@@ -130,7 +130,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
         }
 
         if (this._outputQueue.framesAvailable >= output[0].length) {
-            this._outputQueue.pull(output, 1, false, OPERATION_NONE)
+            this._outputQueue.pull(mono ? output[0]: output, 1, mono, OPERATION_NONE)
         }
 
         return true
