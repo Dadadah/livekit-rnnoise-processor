@@ -1,5 +1,5 @@
 {
-    "name": "@cc-livekit/denoise-plugin",
+    "name": "denoise-plugin",
     "description": "A WebAssembly module implementing the RNNoise noise suppression library for web frontends.",
     "version": "1.0.9",
     "repository": {
