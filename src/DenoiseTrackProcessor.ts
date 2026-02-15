@@ -94,7 +94,7 @@ export class DenoiseTrackProcessor
 
         if (!DenoiseTrackProcessor.loadedContexts.has(ctx)) {
             // Load this from cdn instead of rolling it up
-            const blob = new Blob(["https://cdn.jsdelivr.net/gh/dadadah/denoise-plugin@main/dist/DenoiserWorklet.js"], { type: "application/javascript" })
+            const blob = new Blob(["https://cdn.jsdelivr.net/gh/dadadah/denoise-plugin@main/lib/DenoiserWorklet.js"], { type: "application/javascript" })
             const url = URL.createObjectURL(blob)
 
             try {
