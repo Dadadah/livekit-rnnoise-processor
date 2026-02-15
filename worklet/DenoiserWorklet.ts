@@ -87,8 +87,13 @@ class DenoiserWorklet extends AudioWorkletProcessor {
             return true
         }
 
+        let mono = false;
+        if (input.length == 1) {
+            mono = true;
+        }
+
         // mutiple
-        this._inputQueue.push(input, 1, false, OPERATION_NONE)
+        this._inputQueue.push(mono ? input[0] : input, 1, mono, OPERATION_NONE)
 
         if (this._inputQueue.framesAvailable >= RNNOISE_SAMPLE_LENGTH) {
             if (this._shouldDenoise) {
@@ -125,7 +130,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
         }
 
         if (this._outputQueue.framesAvailable >= output[0].length) {
-            this._outputQueue.pull(output, 1, true, OPERATION_NONE)
+            this._outputQueue.pull(output, 1, false, OPERATION_NONE)
         }
 
         return true
