@@ -93,7 +93,7 @@ export class DenoiseTrackProcessor
         const ctx = this.audioOpts.audioContext
 
         if (!DenoiseTrackProcessor.loadedContexts.has(ctx)) {
-            await ctx.audioWorklet.addModule(new URL("https://cdn.jsdelivr.net/gh/dadadah/denoise-plugin@afa25e08a9a57cfc859175e42c71c7b46c2e41a1/dist/DenoiserWorklet.js"));
+            await ctx.audioWorklet.addModule(new URL("https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@afa25e08a9a57cfc859175e42c71c7b46c2e41a1/dist/DenoiserWorklet.js"));
             DenoiseTrackProcessor.loadedContexts.add(ctx);
         }
 

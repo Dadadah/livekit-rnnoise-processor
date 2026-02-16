@@ -1,10 +1,10 @@
 {
-    "name": "denoise-plugin",
-    "description": "A WebAssembly module implementing the RNNoise noise suppression library for web frontends.",
+    "name": "livekit-rnnoise-processor",
+    "description": "A WebAssembly module implementing the RNNoise noise suppression library for livekit typescript.",
     "version": "1.1.0",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/dadadah/denoise-plugin.git"
+        "url": "git+https://github.com/Dadadah/livekit-rnnoise-processor.git"
     },
     "type": "module",
     "exports": {
@@ -29,7 +29,6 @@
         "@types/emscripten": "^1.39.13",
         "livekit-client": "^2.8.1",
         "publint": "^0.2.8",
-        "rollup-plugin-typescript2": "^0.36.0",
         "ts-loader": "^9.5.2",
         "typescript": "^5.5.2",
         "webpack-cli": "^6.0.1"

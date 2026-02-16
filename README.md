@@ -1,4 +1,11 @@
-# Denoise-Plugin
+# Livekit rnnoise Processor
 
-- A WebAssembly module implementing the RNNoise noise suppression library for web frontends.
-- Designed as a denoise filter for the LiveKit audio processor, ensuring effective noise reduction for high-quality audio processing.
+- A WebAssembly module implementing the RNNoise noise suppression library for livekit typescript.
+
+## Usage
+
+```
+import { DenoiseTrackProcessor } from "livekit-rnnoise-processor";
+
+track.setProcessor(new DenoiseTrackProcessor());
+```
