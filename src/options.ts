@@ -1,5 +1,6 @@
 export class DenoiseOptions {
-    debugLogs?: boolean
-    vadLogs?: boolean
-    bufferOverflowMs?: number
+  debugLogs?: boolean = false;
+  vadLogs?: boolean = false;
+  bufferOverflowMs?: number = 0;
+  workletCDNURL?: string;
 }

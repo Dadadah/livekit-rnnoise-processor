@@ -1,17 +1,17 @@
 {
-    "useTabs": false,
-    "singleQuote": false,
-    "trailingComma": "all",
-    "printWidth": 100,
-    "semi": false,
-    "tabWidth": 4,
-    "plugins": [],
-    "overrides": [
-        {
-            "files": "*.md",
-            "options": {
-                "tabWidth": 1
-            }
-        }
-    ]
+  "useTabs": false,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "printWidth": 200,
+  "semi": true,
+  "tabWidth": 2,
+  "plugins": [],
+  "overrides": [
+    {
+      "files": "*.md",
+      "options": {
+        "tabWidth": 1
+      }
+    }
+  ]
 }
