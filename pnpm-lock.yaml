@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      compute-lcm:
-        specifier: ^1.1.2
-        version: 1.1.2
     devDependencies:
       '@types/audioworklet':
         specifier: ^0.0.56
@@ -249,12 +245,6 @@ packages:
 
   commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
-
-  compute-gcd@1.2.1:
-    resolution: {integrity: sha512-TwMbxBNz0l71+8Sc4czv13h4kEqnchV9igQZBi6QUaz09dnz13juGnnaWWJTRsP3brxOoxeB4SA2WELLw1hCtg==}
-
-  compute-lcm@1.1.2:
-    resolution: {integrity: sha512-OFNPdQAXnQhDSKioX8/XYT6sdUlXwpeMjfd6ApxMJfyZ4GxmLR1xvMERctlYhlHwIiz6CSpBc2+qYKjHGZw4TQ==}
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -598,21 +588,6 @@ packages:
     peerDependencies:
       browserslist: '>= 4.21.0'
 
-  validate.io-array@1.0.6:
-    resolution: {integrity: sha512-DeOy7CnPEziggrOO5CZhVKJw6S3Yi7e9e65R1Nl/RTN1vTQKnzjfvks0/8kQ40FP/dsjRAOd4hxmJ7uLa6vxkg==}
-
-  validate.io-function@1.0.2:
-    resolution: {integrity: sha512-LlFybRJEriSuBnUhQyG5bwglhh50EpTL2ul23MPIuR1odjO7XaMLFV8vHGwp7AZciFxtYOeiSCT5st+XSPONiQ==}
-
-  validate.io-integer-array@1.0.0:
-    resolution: {integrity: sha512-mTrMk/1ytQHtCY0oNO3dztafHYyGU88KL+jRxWuzfOmQb+4qqnWmI+gykvGp8usKZOM0H7keJHEbRaFiYA0VrA==}
-
-  validate.io-integer@1.0.5:
-    resolution: {integrity: sha512-22izsYSLojN/P6bppBqhgUDjCkr5RY2jd+N2a3DCAUey8ydvrZ/OkGvFPR7qfOpwR2LC5p4Ngzxz36g5Vgr/hQ==}
-
-  validate.io-number@1.0.3:
-    resolution: {integrity: sha512-kRAyotcbNaSYoDnXvb4MHg/0a1egJdLwS6oJ38TJY7aw9n93Fl/3blIXdyYvPOp55CNxywooG/3BcrwNrBpcSg==}
-
   watchpack@2.5.1:
     resolution: {integrity: sha512-Zn5uXdcFNIA1+1Ei5McRd+iRzfhENPCe7LeABkJtNulSxjma+l7ltNx55BWZkRlwRnpOgHqxnjyaDgJnNXnqzg==}
     engines: {node: '>=10.13.0'}
@@ -881,19 +856,6 @@ snapshots:
   commander@12.1.0: {}
 
   commander@2.20.3: {}
-
-  compute-gcd@1.2.1:
-    dependencies:
-      validate.io-array: 1.0.6
-      validate.io-function: 1.0.2
-      validate.io-integer-array: 1.0.0
-
-  compute-lcm@1.1.2:
-    dependencies:
-      compute-gcd: 1.2.1
-      validate.io-array: 1.0.6
-      validate.io-function: 1.0.2
-      validate.io-integer-array: 1.0.0
 
   cross-spawn@7.0.6:
     dependencies:
@@ -1180,21 +1142,6 @@ snapshots:
       browserslist: 4.28.1
       escalade: 3.2.0
       picocolors: 1.1.1
-
-  validate.io-array@1.0.6: {}
-
-  validate.io-function@1.0.2: {}
-
-  validate.io-integer-array@1.0.0:
-    dependencies:
-      validate.io-array: 1.0.6
-      validate.io-integer: 1.0.5
-
-  validate.io-integer@1.0.5:
-    dependencies:
-      validate.io-number: 1.0.3
-
-  validate.io-number@1.0.3: {}
 
   watchpack@2.5.1:
     dependencies:

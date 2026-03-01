@@ -1,12 +1,7 @@
 import createRNNWasmModuleSync from "./dist/rnnoise-sync.js";
-import { FreeQueue, OPERATION_NONE, OPERATION_MULTIPLY, OPERATION_DIVIDE } from "./free-queue";
-import lcm from "compute-lcm";
 
 const RNNOISE_SAMPLE_LENGTH = 480;
 const SHIFT_16_BIT_NR = 32768;
-const PER_NODE_SAMPLES = 128;
-const CHANNEL_COUNT = 2;
-const PROCESS_CHANNEL_COUNT = 1;
 
 interface IRnnoiseModule extends EmscriptenModule {
   _rnnoise_create: () => number;
@@ -18,32 +13,28 @@ class DenoiserWorklet extends AudioWorkletProcessor {
   private _rnWasmInterface: IRnnoiseModule;
 
   private _rnContext: number;
+  private _rnPtr: number;
 
-  private _queueSize: number;
+  private _queueSize: number = 4;
 
-  private _inputQueue: FreeQueue;
-  private _outputQueue: FreeQueue;
+  private _inputBuffer: number[] = [];
+  private _outputBuffer: number[] = [];
+  private _frameBuffer: number[] = [];
   private _destroyed: boolean = false;
   private _debugLogs: boolean = false;
   private _vadLogs: boolean = false;
   private _shouldDenoise: boolean = true;
-  private _numberOfChannels: number = 0;
 
   constructor(options: any) {
     super();
 
     this._debugLogs = options.processorOptions?.debugLogs ?? false;
     this._vadLogs = options.processorOptions?.vadLogs ?? false;
-    this._numberOfChannels = options.processorOptions?.numberOfChannels ?? CHANNEL_COUNT;
 
     try {
       this._rnWasmInterface = createRNNWasmModuleSync() as IRnnoiseModule;
-      this._queueSize = lcm(RNNOISE_SAMPLE_LENGTH, PER_NODE_SAMPLES) ?? 0;
-
-      this._inputQueue = new FreeQueue(this._rnWasmInterface, this._queueSize, this._numberOfChannels, RNNOISE_SAMPLE_LENGTH, PROCESS_CHANNEL_COUNT);
-      this._outputQueue = new FreeQueue(this._rnWasmInterface, this._queueSize, this._numberOfChannels, RNNOISE_SAMPLE_LENGTH, PROCESS_CHANNEL_COUNT);
-
       this._rnContext = this._rnWasmInterface._rnnoise_create();
+      this._rnPtr = this._rnWasmInterface._malloc(RNNOISE_SAMPLE_LENGTH * this._queueSize);
 
       if (this._debugLogs) {
         console.log("DenoiserWorklet.constructor options:", options, ", Context:", this._rnContext);
@@ -60,6 +51,21 @@ class DenoiserWorklet extends AudioWorkletProcessor {
     this._handleEvent();
   }
 
+  removeNoise() {
+    let ptr = this._rnPtr;
+    let st = this._rnContext;
+    for (let i = 0; i < RNNOISE_SAMPLE_LENGTH; i++) {
+      this._rnWasmInterface.HEAPF32[(ptr >> 2) + i] = this._frameBuffer[i] * SHIFT_16_BIT_NR;
+    }
+    const vadResult = this._rnWasmInterface._rnnoise_process_frame(st, ptr, ptr);
+    if (this._debugLogs && this._vadLogs) {
+      console.log("DenoiserWorklet.process vad:", vadResult);
+    }
+    for (let i = 0; i < RNNOISE_SAMPLE_LENGTH; i++) {
+      this._frameBuffer[i] = this._rnWasmInterface.HEAPF32[(ptr >> 2) + i] / SHIFT_16_BIT_NR;
+    }
+  }
+
   process(inputs: Float32Array[][], outputs: Float32Array[][]) {
     if (this._destroyed) {
       return true;
@@ -72,40 +78,36 @@ class DenoiserWorklet extends AudioWorkletProcessor {
       return true;
     }
 
-    let mono = false;
-    if (input.length == 1) {
-      mono = true;
-    }
+    // Drain the first channel of the input into the buffer
+    this._inputBuffer.push(...input[0]);
 
-    // mutiple
-    this._inputQueue.push(mono ? input[0] : input, 1, mono, OPERATION_NONE);
-
-    if (this._inputQueue.framesAvailable >= RNNOISE_SAMPLE_LENGTH) {
+    if (this._inputBuffer.length >= RNNOISE_SAMPLE_LENGTH) {
       if (this._shouldDenoise) {
-        // single
-        this._inputQueue.pull(this._inputQueue.getChannelData(0), SHIFT_16_BIT_NR, true, OPERATION_MULTIPLY);
-        // single
-        const vadScore = this._rnWasmInterface._rnnoise_process_frame(this._rnContext, this._outputQueue.getHeapAddress(), this._inputQueue.getHeapAddress());
-
-        if (this._debugLogs && this._vadLogs) {
-          console.log("DenoiserWorklet.process vad:", vadScore);
+        // Pull the first 480 samples out of the input buffer and put it into the frame buffer
+        for (let i = 0; i < RNNOISE_SAMPLE_LENGTH; i++) {
+          this._frameBuffer[i] = this._inputBuffer[i];
         }
 
-        // single
-        this._outputQueue.push(this._outputQueue.getChannelData(0), SHIFT_16_BIT_NR, true, OPERATION_DIVIDE);
+        this.removeNoise();
+
+        // Push the frame buffer into the output buffer
+        // Frame buffer can exist afterwards as it will be overwritten. Saves memory.
+        this._outputBuffer.push(...this._frameBuffer);
       } else {
-        // copy org data
-        this._inputQueue.pull(this._inputQueue.getChannelData(0), 1, true, OPERATION_NONE);
-        this._outputQueue.push(this._inputQueue.getChannelData(0), 1, true, OPERATION_NONE);
+        // copy orginal data
+        this._outputBuffer.push(...this._inputBuffer.slice(RNNOISE_SAMPLE_LENGTH));
       }
+      // Slice the input buffer afterwards
+      this._inputBuffer = this._inputBuffer.slice(RNNOISE_SAMPLE_LENGTH);
     }
 
-    if (this._outputQueue.framesAvailable >= output[0].length) {
-      let monoOut = false;
-      if (output.length == 1) {
-        monoOut = true;
-      }
-      this._outputQueue.pull(monoOut ? output[0] : output, 1, monoOut, OPERATION_NONE);
+    if (this._outputBuffer.length >= output[0].length) {
+      output.forEach((channel) => {
+        for (let i = 0; i < channel.length; i++) {
+          channel[i] = this._outputBuffer[i];
+        }
+      });
+      this._outputBuffer = this._outputBuffer.slice(output[0].length);
     }
 
     return true;
@@ -119,13 +121,6 @@ class DenoiserWorklet extends AudioWorkletProcessor {
 
     this._destroyed = true;
 
-    if (this._inputQueue) {
-      this._inputQueue.free();
-    }
-    if (this._outputQueue) {
-      this._outputQueue.free();
-    }
-
     if (this._rnContext) {
       this._rnWasmInterface._rnnoise_destroy(this._rnContext);
       this._rnContext = 0;
@@ -136,10 +131,6 @@ class DenoiserWorklet extends AudioWorkletProcessor {
     this.port.onmessage = (event) => {
       if (event.data.message === "SET_ENABLED") {
         this._shouldDenoise = event.data.enable ?? this._shouldDenoise;
-        if (!this._shouldDenoise) {
-          this._inputQueue.clear();
-          this._outputQueue.clear();
-        }
 
         if (this._debugLogs) {
           console.log("DenoiserWorklet.SET_ENABLED: ", this._shouldDenoise);

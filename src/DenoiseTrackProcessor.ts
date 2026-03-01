@@ -109,6 +109,8 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
         debugLogs: this.filterOpts?.debugLogs,
         vadLogs: this.filterOpts?.vadLogs,
       },
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
     });
 
     // source node
