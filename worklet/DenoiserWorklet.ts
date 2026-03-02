@@ -95,7 +95,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
         this._outputBuffer.push(...this._frameBuffer);
       } else {
         // copy orginal data
-        this._outputBuffer.push(...this._inputBuffer.slice(RNNOISE_SAMPLE_LENGTH));
+        this._outputBuffer.push(...this._inputBuffer.slice(0, RNNOISE_SAMPLE_LENGTH));
       }
       // Slice the input buffer afterwards
       this._inputBuffer = this._inputBuffer.slice(RNNOISE_SAMPLE_LENGTH);
