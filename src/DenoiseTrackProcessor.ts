@@ -113,7 +113,7 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
       numberOfOutputs: 1,
     });
 
-    this.audioOpts.track.applyConstraints({ sampleRate: 48000 });
+    this.audioOpts.track.applyConstraints({ sampleRate: { exact: 48000 } });
     // source node
     this.orgSourceNode = ctx.createMediaStreamSource(new MediaStream([this.audioOpts.track]));
     // source node==>process node
