@@ -1,4 +1,4 @@
-import createRNNWasmModuleSync from "./dist/rnnoise-sync.js";
+import createRNNWasmModule from "./dist/rnnoise.js";
 import MonoResampler from "./MonoResampler";
 
 const RNNOISE_SAMPLE_LENGTH = 480;
@@ -49,8 +49,21 @@ class DenoiserWorklet extends AudioWorkletProcessor {
 
     this._handleEvent();
 
-    createRNNWasmModuleSync().then((module) => {
-      this.initRNNoise(module as IRnnoiseModule);
+    const blob: Blob = options.processorOptions?.blob;
+    if (!blob) {
+      throw "DenoiserWorklet must be initialized with a blob!";
+    }
+
+    blob.arrayBuffer().then((buffer) => {
+      const instantiateWasm = async (info: WebAssembly.Imports | undefined, successCallback: (instance: WebAssembly.Instance, module: WebAssembly.Module) => {}) => {
+        let module = new WebAssembly.Module(buffer);
+        let instance = new WebAssembly.Instance(module, info);
+        successCallback(instance, module);
+      };
+
+      createRNNWasmModule({ instantiateWasm }).then((module) => {
+        this.initRNNoise(module as IRnnoiseModule);
+      });
     });
   }
 
@@ -107,7 +120,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
     const output = outputs[0];
 
     if (!input[0]) {
-      return false;
+      return true;
     }
 
     // Drain the first channel of the input into the buffer
@@ -142,7 +155,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
       this._outputBuffer = this._outputBuffer.slice(output[0].length);
     }
 
-    return false;
+    return true;
   }
 
   destroy() {

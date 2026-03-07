@@ -9,8 +9,8 @@ export CXXFLAGS=${OPTIMIZE}
 
 USE_LITE=1
 
-ENTRY_POINT="rnnoise-sync.js"
-MODULE_CREATE_NAME="createRNNWasmModuleSync"
+ENTRY_POINT="rnnoise"
+MODULE_CREATE_NAME="createRNNWasmModule"
 RNN_EXPORTED_FUNCTIONS="['_rnnoise_process_frame', '_rnnoise_init', '_rnnoise_destroy', '_rnnoise_create', '_malloc', '_free']"
 EXPORTED_RUNTIME_METHODS="['HEAPF32']"
 
@@ -47,22 +47,20 @@ echo "============================================="
     -g2 \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s MALLOC=emmalloc \
-    -s MAXIMUM_MEMORY=4GB \
+    -s MAXIMUM_MEMORY=100MB \
     -s MODULARIZE=1 \
     -s ENVIRONMENT="worklet" \
     -s EXPORT_ES6=1 \
     -s WASM_ASYNC_COMPILATION=0 \
-    -s SINGLE_FILE=1 \
+    -s SINGLE_FILE=0 \
     -s EXPORT_NAME=${MODULE_CREATE_NAME} \
     -s EXPORTED_FUNCTIONS="${RNN_EXPORTED_FUNCTIONS}" \
     -s EXPORTED_RUNTIME_METHODS="${EXPORTED_RUNTIME_METHODS}" \
     .libs/librnnoise.${SO_SUFFIX} \
-    -o ./$ENTRY_POINT
+    -o ./$ENTRY_POINT.js
 
-  rm -rf ../worklet/dist
-  mkdir -p ../worklet/dist
-
-  mv $ENTRY_POINT ../worklet/dist/
+  mv $ENTRY_POINT.js ../worklet/dist/
+  mv $ENTRY_POINT.wasm ../worklet/dist/
 )
 echo "============================================="
 echo "Compiling wasm bindings done"

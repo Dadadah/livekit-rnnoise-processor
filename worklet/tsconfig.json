@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "es2022",
+    "allowJs": true,
+    "outDir": "../dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node"
+  },
+  "exclude": ["rollup.config.js", "Post.js"]
+}

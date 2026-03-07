@@ -4,6 +4,7 @@ import { DenoiseOptions } from "./options";
 export type DenoiseFilterOptions = DenoiseOptions;
 
 const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@10f7d5950fde21d8e0a89cd679f57fea816532bc/dist/DenoiserWorklet.js";
+const rnnoiseCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@af12ace2c8c507483514da62683b235e9f1176ba/dist/rnnoise.wasm";
 
 export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions> {
   private static readonly loadedContexts = new WeakSet<BaseAudioContext>();
@@ -103,11 +104,16 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
       DenoiseTrackProcessor.loadedContexts.add(ctx);
     }
 
+    // Fetch the rnnoise binary from cdn
+    const resp = await fetch(rnnoiseCDNURL);
+    const content = await resp.blob();
+
     // process node
     this.denoiseNode = new AudioWorkletNode(ctx, "DenoiserWorklet", {
       processorOptions: {
         debugLogs: this.filterOpts?.debugLogs,
         vadLogs: this.filterOpts?.vadLogs,
+        rnnoiseBlob: content,
       },
       numberOfInputs: 1,
       numberOfOutputs: 1,
