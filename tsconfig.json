@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "moduleResolution": "node"
   },
-  "exclude": ["node_modules", "dist", "lib", "./worklet", "webpack.*", "test"]
+  "exclude": ["node_modules", "dist", "lib", "./worklet", "webpack.*", "test", "jest.config.js"]
 }
