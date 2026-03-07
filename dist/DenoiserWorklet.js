@@ -1468,7 +1468,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
         const input = inputs[0];
         const output = outputs[0];
         if (!input[0]) {
-            return true;
+            return false;
         }
         // Drain the first channel of the input into the buffer
         this._inputBuffer.push(...this._inputResampler.resample(input[0]));
@@ -1498,7 +1498,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
             });
             this._outputBuffer = this._outputBuffer.slice(output[0].length);
         }
-        return true;
+        return false;
     }
     destroy() {
         // Attempting to release a non initialized processor, do nothing.
@@ -1519,6 +1519,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
             this._rnContext = 0;
             this._rnPtr = 0;
         }
+        this.port.close();
         this._outputBuffer = [];
         this._inputBuffer = [];
         this._inputResampler = undefined;

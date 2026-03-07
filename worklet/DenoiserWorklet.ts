@@ -29,7 +29,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
   private _inputResampler: MonoResampler | undefined;
   private _outputResampler: MonoResampler | undefined;
 
-  constructor(options: any) {
+  constructor(options: AudioWorkletNodeOptions) {
     super();
 
     // this._debugLogs = options.processorOptions?.debugLogs ?? false;
@@ -107,7 +107,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
     const output = outputs[0];
 
     if (!input[0]) {
-      return true;
+      return false;
     }
 
     // Drain the first channel of the input into the buffer
@@ -142,7 +142,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
       this._outputBuffer = this._outputBuffer.slice(output[0].length);
     }
 
-    return true;
+    return false;
   }
 
   destroy() {
@@ -166,6 +166,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
       this._rnPtr = 0;
     }
 
+    this.port.close();
     this._outputBuffer = [];
     this._inputBuffer = [];
     this._inputResampler = undefined;
