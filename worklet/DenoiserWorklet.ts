@@ -1,7 +1,9 @@
 import createRNNWasmModuleSync from "./dist/rnnoise-sync.js";
+import MonoResampler from "./MonoResampler";
 
 const RNNOISE_SAMPLE_LENGTH = 480;
 const SHIFT_16_BIT_NR = 32768;
+const RNNOISE_REQUIRED_SAMPLE_RATE = 48000;
 
 interface IRnnoiseModule extends EmscriptenModule {
   _rnnoise_create: () => number;
@@ -10,34 +12,56 @@ interface IRnnoiseModule extends EmscriptenModule {
 }
 
 class DenoiserWorklet extends AudioWorkletProcessor {
-  private _rnWasmInterface: IRnnoiseModule;
+  private _rnWasmInterface: IRnnoiseModule | undefined;
 
-  private _rnContext: number;
-  private _rnPtr: number;
+  private _rnContext: number = 0;
+  private _rnPtr: number = 0;
 
   private _queueSize: number = 4;
 
   private _inputBuffer: number[] = [];
   private _outputBuffer: number[] = [];
-  private _frameBuffer: number[] = [];
+  private _frameBuffer: Float32Array = new Float32Array(RNNOISE_SAMPLE_LENGTH);
   private _destroyed: boolean = false;
   private _debugLogs: boolean = false;
   private _vadLogs: boolean = false;
   private _shouldDenoise: boolean = true;
+  private _inputResampler: MonoResampler | undefined;
+  private _outputResampler: MonoResampler | undefined;
 
   constructor(options: any) {
     super();
 
-    this._debugLogs = options.processorOptions?.debugLogs ?? false;
+    // this._debugLogs = options.processorOptions?.debugLogs ?? false;
+    this._debugLogs = true;
     this._vadLogs = options.processorOptions?.vadLogs ?? false;
 
+    if (this._debugLogs) {
+      console.log(`Received a sample rate of ${sampleRate}`);
+    }
+
+    if (this._debugLogs) {
+      console.log("DenoiserWorklet.constructor options:", options);
+    }
+
+    this._inputResampler = new MonoResampler(sampleRate, RNNOISE_REQUIRED_SAMPLE_RATE, RNNOISE_SAMPLE_LENGTH * 2);
+    this._outputResampler = new MonoResampler(RNNOISE_REQUIRED_SAMPLE_RATE, sampleRate, RNNOISE_SAMPLE_LENGTH * 2);
+
+    this._handleEvent();
+
+    createRNNWasmModuleSync().then((module) => {
+      this.initRNNoise(module as IRnnoiseModule);
+    });
+  }
+
+  initRNNoise(module: IRnnoiseModule) {
     try {
-      this._rnWasmInterface = createRNNWasmModuleSync() as IRnnoiseModule;
+      this._rnWasmInterface = module;
       this._rnContext = this._rnWasmInterface._rnnoise_create();
       this._rnPtr = this._rnWasmInterface._malloc(RNNOISE_SAMPLE_LENGTH * this._queueSize);
 
       if (this._debugLogs) {
-        console.log("DenoiserWorklet.constructor options:", options, ", Context:", this._rnContext);
+        console.log("DenoiserWorklet context:", this._rnContext);
       }
     } catch (error) {
       if (this._debugLogs) {
@@ -47,27 +71,35 @@ class DenoiserWorklet extends AudioWorkletProcessor {
       this.destroy();
       throw error;
     }
-
-    this._handleEvent();
   }
 
   removeNoise() {
-    let ptr = this._rnPtr;
-    let st = this._rnContext;
-    for (let i = 0; i < RNNOISE_SAMPLE_LENGTH; i++) {
-      this._rnWasmInterface.HEAPF32[(ptr >> 2) + i] = this._frameBuffer[i] * SHIFT_16_BIT_NR;
-    }
-    const vadResult = this._rnWasmInterface._rnnoise_process_frame(st, ptr, ptr);
-    if (this._debugLogs && this._vadLogs) {
-      console.log("DenoiserWorklet.process vad:", vadResult);
-    }
-    for (let i = 0; i < RNNOISE_SAMPLE_LENGTH; i++) {
-      this._frameBuffer[i] = this._rnWasmInterface.HEAPF32[(ptr >> 2) + i] / SHIFT_16_BIT_NR;
+    if (this._rnWasmInterface) {
+      let ptr = this._rnPtr;
+      let st = this._rnContext;
+      for (let i = 0; i < RNNOISE_SAMPLE_LENGTH; i++) {
+        this._rnWasmInterface.HEAPF32[(ptr >> 2) + i] = this._frameBuffer[i] * SHIFT_16_BIT_NR;
+      }
+      const vadResult = this._rnWasmInterface._rnnoise_process_frame(st, ptr, ptr);
+      if (this._debugLogs && this._vadLogs) {
+        console.log("DenoiserWorklet.process vad:", vadResult);
+      }
+      for (let i = 0; i < RNNOISE_SAMPLE_LENGTH; i++) {
+        this._frameBuffer[i] = this._rnWasmInterface.HEAPF32[(ptr >> 2) + i] / SHIFT_16_BIT_NR;
+      }
+    } else {
+      console.error("DenoiserWorklet tried to process noise without the rnnoise wasm module");
     }
   }
 
   process(inputs: Float32Array[][], outputs: Float32Array[][]) {
-    if (this._destroyed) {
+    // If the worklet has been destroyed, or the resamplers are undefiend (also implying destruction) then tell the browser we're ready for cleanup.
+    if (this._destroyed || !this._inputResampler || !this._outputResampler) {
+      return false;
+    }
+
+    // Awaiting initialization of wasm module
+    if (!this._rnWasmInterface) {
       return true;
     }
 
@@ -79,7 +111,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
     }
 
     // Drain the first channel of the input into the buffer
-    this._inputBuffer.push(...input[0]);
+    this._inputBuffer.push(...this._inputResampler.resample(input[0]));
 
     if (this._inputBuffer.length >= RNNOISE_SAMPLE_LENGTH) {
       if (this._shouldDenoise) {
@@ -92,7 +124,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
 
         // Push the frame buffer into the output buffer
         // Frame buffer can exist afterwards as it will be overwritten. Saves memory.
-        this._outputBuffer.push(...this._frameBuffer);
+        this._outputBuffer.push(...this._outputResampler.resample(this._frameBuffer));
       } else {
         // copy orginal data
         this._outputBuffer.push(...this._inputBuffer.slice(0, RNNOISE_SAMPLE_LENGTH));
@@ -116,15 +148,28 @@ class DenoiserWorklet extends AudioWorkletProcessor {
   destroy() {
     // Attempting to release a non initialized processor, do nothing.
     if (this._destroyed) {
+      if (this._debugLogs) {
+        console.log("Destroying an already destroyed DenoiserWorklet.");
+      }
       return;
     }
-
     this._destroyed = true;
-
     if (this._rnContext) {
-      this._rnWasmInterface._rnnoise_destroy(this._rnContext);
+      if (this._debugLogs) {
+        console.log("Destroying rnnoise module");
+      }
+
+      this._rnWasmInterface?._rnnoise_destroy(this._rnContext);
+      this._rnWasmInterface?._free(this._rnPtr);
+      this._rnWasmInterface = undefined;
       this._rnContext = 0;
+      this._rnPtr = 0;
     }
+
+    this._outputBuffer = [];
+    this._inputBuffer = [];
+    this._inputResampler = undefined;
+    this._outputResampler = undefined;
   }
 
   _handleEvent() {
@@ -135,9 +180,9 @@ class DenoiserWorklet extends AudioWorkletProcessor {
         if (this._debugLogs) {
           console.log("DenoiserWorklet.SET_ENABLED: ", this._shouldDenoise);
         }
-      } else if (event.data.message === "DESTORY") {
+      } else if (event.data.message === "DESTORY" || event.data.message === "DESTROY") {
         if (this._debugLogs) {
-          console.log("DenoiserWorklet.DESTORY");
+          console.log("DenoiserWorklet.DESTROY");
         }
         this.destroy();
       }

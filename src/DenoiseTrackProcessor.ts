@@ -133,6 +133,7 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
 
   _closeInternal() {
     this.denoiseNode?.port.postMessage({ message: "DESTORY" });
+    this.denoiseNode?.port.close();
     this.denoiseNode?.disconnect();
     this.orgSourceNode?.disconnect();
     this.denoiseNode = undefined;

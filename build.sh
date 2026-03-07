@@ -12,6 +12,7 @@ USE_LITE=1
 ENTRY_POINT="rnnoise-sync.js"
 MODULE_CREATE_NAME="createRNNWasmModuleSync"
 RNN_EXPORTED_FUNCTIONS="['_rnnoise_process_frame', '_rnnoise_init', '_rnnoise_destroy', '_rnnoise_create', '_malloc', '_free']"
+EXPORTED_RUNTIME_METHODS="['HEAPF32']"
 
 if [[ $(uname) == "Darwin" ]]; then
   SO_SUFFIX="dylib"
@@ -48,12 +49,13 @@ echo "============================================="
     -s MALLOC=emmalloc \
     -s MAXIMUM_MEMORY=4GB \
     -s MODULARIZE=1 \
-    -s ENVIRONMENT="web,worker,shell" \
+    -s ENVIRONMENT="worklet" \
     -s EXPORT_ES6=1 \
     -s WASM_ASYNC_COMPILATION=0 \
     -s SINGLE_FILE=1 \
     -s EXPORT_NAME=${MODULE_CREATE_NAME} \
     -s EXPORTED_FUNCTIONS="${RNN_EXPORTED_FUNCTIONS}" \
+    -s EXPORTED_RUNTIME_METHODS="${EXPORTED_RUNTIME_METHODS}" \
     .libs/librnnoise.${SO_SUFFIX} \
     -o ./$ENTRY_POINT
 
