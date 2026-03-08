@@ -32,8 +32,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
   constructor(options: AudioWorkletNodeOptions) {
     super();
 
-    // this._debugLogs = options.processorOptions?.debugLogs ?? false;
-    this._debugLogs = true;
+    this._debugLogs = options.processorOptions?.debugLogs ?? false;
     this._vadLogs = options.processorOptions?.vadLogs ?? false;
 
     if (this._debugLogs) {

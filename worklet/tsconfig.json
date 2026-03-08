@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "moduleResolution": "node"
   },
-  "exclude": ["rollup.config.js", "Post.js"]
+  "exclude": ["rollup.config.js"]
 }
