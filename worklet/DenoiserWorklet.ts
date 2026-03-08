@@ -49,21 +49,18 @@ class DenoiserWorklet extends AudioWorkletProcessor {
 
     this._handleEvent();
 
-    const blob: Blob = options.processorOptions?.blob;
-    if (!blob) {
-      throw "DenoiserWorklet must be initialized with a blob!";
+    const rnnoiseBuffer: ArrayBuffer = options.processorOptions?.rnnoiseBuffer;
+    if (!rnnoiseBuffer) {
+      throw "DenoiserWorklet must be initialized with an rnnoise array buffer!";
     }
+    const instantiateWasm = async (info: WebAssembly.Imports | undefined, successCallback: (instance: WebAssembly.Instance, module: WebAssembly.Module) => {}) => {
+      let module = new WebAssembly.Module(rnnoiseBuffer);
+      let instance = new WebAssembly.Instance(module, info);
+      successCallback(instance, module);
+    };
 
-    blob.arrayBuffer().then((buffer) => {
-      const instantiateWasm = async (info: WebAssembly.Imports | undefined, successCallback: (instance: WebAssembly.Instance, module: WebAssembly.Module) => {}) => {
-        let module = new WebAssembly.Module(buffer);
-        let instance = new WebAssembly.Instance(module, info);
-        successCallback(instance, module);
-      };
-
-      createRNNWasmModule({ instantiateWasm }).then((module) => {
-        this.initRNNoise(module as IRnnoiseModule);
-      });
+    createRNNWasmModule({ instantiateWasm }).then((module) => {
+      this.initRNNoise(module as IRnnoiseModule);
     });
   }
 
