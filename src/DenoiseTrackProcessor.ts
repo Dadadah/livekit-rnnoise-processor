@@ -3,7 +3,7 @@ import type { AudioProcessorOptions, Room, TrackProcessor } from "livekit-client
 import { DenoiseOptions } from "./options";
 export type DenoiseFilterOptions = DenoiseOptions;
 
-const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@cc92f240a883cadd30abc162a6a495b9a11e01b9/dist/";
+const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@860d8053d4917389dfdebb20d88d0bb6ce950bda/dist/";
 
 export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions> {
   private static readonly loadedContexts = new WeakSet<BaseAudioContext>();
