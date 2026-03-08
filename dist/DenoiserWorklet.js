@@ -78,6 +78,8 @@ async function createRNNWasmModule(moduleArg = {}) {
         }
         return scriptDirectory + path;
     }
+    // Hooks that are implemented differently in different runtime environments.
+    var readAsync;
     if (!ENVIRONMENT_IS_AUDIO_WORKLET) {
         throw new Error('environment detection error');
     }
@@ -120,6 +122,13 @@ async function createRNNWasmModule(moduleArg = {}) {
             abort('Assertion failed' + (text ? ': ' + text : ''));
         }
     }
+    // We used to include malloc/free by default in the past. Show a helpful error in
+    // builds with assertions.
+    /**
+     * Indicates whether filename is delivered via file protocol (as opposed to http/https)
+     * @noinline
+     */
+    var isFileURI = (filename) => filename.startsWith('file://');
     // include: runtime_common.js
     // include: runtime_stack_check.js
     // Initializes the stack cookie. Called at the startup of main and at the startup of each thread in pthreads mode.
@@ -342,14 +351,54 @@ async function createRNNWasmModule(moduleArg = {}) {
         }
         // Throwing a plain string here, even though it not normally advisable since
         // this gets turning into an `abort` in instantiateArrayBuffer.
-        throw 'sync fetching of the wasm failed: you can preload it to Module["wasmBinary"] manually, or emcc.py will do that for you when generating HTML (but not JS)';
+        throw 'both async and sync fetching of the wasm failed';
     }
-    function instantiateSync(file, info) {
-        var module;
-        var binary = getBinarySync(file);
-        module = new WebAssembly.Module(binary);
-        var instance = new WebAssembly.Instance(module, info);
-        return [instance, module];
+    async function getWasmBinary(binaryFile) {
+        // If we don't have the binary yet, load it asynchronously using readAsync.
+        if (!wasmBinary) {
+            // Fetch the binary using readAsync
+            try {
+                var response = await readAsync(binaryFile);
+                return new Uint8Array(response);
+            }
+            catch {
+                // Fall back to getBinarySync below;
+            }
+        }
+        // Otherwise, getBinarySync should be able to get it synchronously
+        return getBinarySync(binaryFile);
+    }
+    async function instantiateArrayBuffer(binaryFile, imports) {
+        try {
+            var binary = await getWasmBinary(binaryFile);
+            var instance = await WebAssembly.instantiate(binary, imports);
+            return instance;
+        }
+        catch (reason) {
+            err(`failed to asynchronously prepare wasm: ${reason}`);
+            // Warn on some common problems.
+            if (isFileURI(binaryFile)) {
+                err(`warning: Loading from a file URI (${binaryFile}) is not supported in most browsers. See https://emscripten.org/docs/getting_started/FAQ.html#how-do-i-run-a-local-webserver-for-testing-why-does-my-program-stall-in-downloading-or-preparing`);
+            }
+            abort(reason);
+        }
+    }
+    async function instantiateAsync(binary, binaryFile, imports) {
+        if (!binary) {
+            try {
+                var response = fetch(binaryFile, { credentials: 'same-origin' });
+                var instantiationResult = await WebAssembly.instantiateStreaming(response, imports);
+                return instantiationResult;
+            }
+            catch (reason) {
+                // We expect the most common failure cause to be a bad MIME type for the binary,
+                // in which case falling back to ArrayBuffer instantiation should work.
+                err(`wasm streaming compile failed: ${reason}`);
+                err('falling back to ArrayBuffer instantiation');
+                // fall back of instantiateArrayBuffer below
+            }
+        }
+        return instantiateArrayBuffer(binaryFile, imports);
     }
     function getWasmImports() {
         // prepare imports
@@ -361,7 +410,7 @@ async function createRNNWasmModule(moduleArg = {}) {
     }
     // Create the wasm instance.
     // Receives the wasm imports, returns the exports.
-    function createWasm() {
+    async function createWasm() {
         // Load the wasm module and create an instance of using native support in the JS engine.
         // handle a generated wasm instance, receiving its exports and
         // performing other necessary setup
@@ -373,6 +422,19 @@ async function createRNNWasmModule(moduleArg = {}) {
             return wasmExports;
         }
         // Prefer streaming instantiation if available.
+        // Async compilation can be confusing when an error on the page overwrites Module
+        // (for example, if the order of elements is wrong, and the one defining Module is
+        // later), so we save Module and check it later.
+        var trueModule = Module;
+        function receiveInstantiationResult(result) {
+            // 'result' is a ResultObject object which has both the module and instance.
+            // receiveInstance() will swap in the exports (to Module.asm) so they can be called
+            assert(Module === trueModule, 'the Module object should not be replaced during async compilation - perhaps the order of HTML elements is wrong?');
+            trueModule = null;
+            // TODO: Due to Closure regression https://github.com/google/closure-compiler/issues/3193, the above line no longer optimizes out down to the following line.
+            // When the regression is fixed, can restore the above PTHREADS-enabled path.
+            return receiveInstance(result['instance']);
+        }
         var info = getWasmImports();
         // User shell pages can write their own Module.instantiateWasm = function(imports, successCallback) callback
         // to manually instantiate the Wasm module themselves. This allows pages to
@@ -394,11 +456,9 @@ async function createRNNWasmModule(moduleArg = {}) {
             });
         }
         wasmBinaryFile ??= findWasmBinary();
-        var result = instantiateSync(wasmBinaryFile, info);
-        // TODO: Due to Closure regression https://github.com/google/closure-compiler/issues/3193,
-        // the above line no longer optimizes out down to the following line.
-        // When the regression is fixed, we can remove this if/else.
-        return receiveInstance(result[0]);
+        var result = await instantiateAsync(wasmBinary, wasmBinaryFile, info);
+        var exports$1 = receiveInstantiationResult(result);
+        return exports$1;
     }
     var callRuntimeCallbacks = (callbacks) => {
         while (callbacks.length > 0) {
@@ -1151,7 +1211,9 @@ async function createRNNWasmModule(moduleArg = {}) {
         checkStackCookie();
     }
     var wasmExports;
-    wasmExports = createWasm();
+    // In modularize mode the generated code is within a factory function so we
+    // can use await here (since it's not top-level-await).
+    wasmExports = await (createWasm());
     run();
     // end include: postamble.js
     // include: postamble_modularize.js

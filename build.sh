@@ -51,7 +51,7 @@ echo "============================================="
     -s MODULARIZE=1 \
     -s ENVIRONMENT="worklet" \
     -s EXPORT_ES6=1 \
-    -s WASM_ASYNC_COMPILATION=0 \
+    -s WASM_ASYNC_COMPILATION=1 \
     -s SINGLE_FILE=0 \
     -s EXPORT_NAME=${MODULE_CREATE_NAME} \
     -s EXPORTED_FUNCTIONS="${RNN_EXPORTED_FUNCTIONS}" \

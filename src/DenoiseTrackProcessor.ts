@@ -3,8 +3,7 @@ import type { AudioProcessorOptions, Room, TrackProcessor } from "livekit-client
 import { DenoiseOptions } from "./options";
 export type DenoiseFilterOptions = DenoiseOptions;
 
-const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@5866aaf08ab4d8d8b4acc14e87246d1b3ae0a907/dist/DenoiserWorklet.js";
-const rnnoiseCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@5866aaf08ab4d8d8b4acc14e87246d1b3ae0a907/dist/rnnoise.wasm";
+const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@5866aaf08ab4d8d8b4acc14e87246d1b3ae0a907/dist/";
 
 export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions> {
   private static readonly loadedContexts = new WeakSet<BaseAudioContext>();
@@ -96,16 +95,22 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
     if (!DenoiseTrackProcessor.loadedContexts.has(ctx)) {
       let url;
       if (!this.filterOpts?.workletCDNURL) {
-        url = defaultCDNURL;
+        url = defaultCDNURL + "DenoiserWorklet.js";
       } else {
-        url = this.filterOpts.workletCDNURL;
+        url = this.filterOpts.workletCDNURL + "DenoiserWorklet.js";
       }
       await ctx.audioWorklet.addModule(new URL(url));
       DenoiseTrackProcessor.loadedContexts.add(ctx);
     }
 
     // Fetch the rnnoise binary from cdn
-    const resp = await fetch(rnnoiseCDNURL);
+    let url;
+    if (!this.filterOpts?.workletCDNURL) {
+      url = defaultCDNURL + "rnnoise.wasm";
+    } else {
+      url = this.filterOpts.workletCDNURL + "rnnoise.wasm";
+    }
+    const resp = await fetch(url);
     const content = await resp.arrayBuffer();
 
     // process node
