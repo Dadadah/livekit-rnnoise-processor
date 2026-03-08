@@ -1,5 +1,6 @@
 // rollup.config.js
 import typescript from "@rollup/plugin-typescript";
+import terser from "@rollup/plugin-terser";
 
 export default {
   input: ["DenoiserWorklet.ts"],
@@ -7,5 +8,5 @@ export default {
     format: "es",
     dir: "../dist",
   },
-  plugins: [typescript()],
+  plugins: [typescript(), terser()],
 };
