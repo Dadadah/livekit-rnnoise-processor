@@ -3,8 +3,8 @@ import type { AudioProcessorOptions, Room, TrackProcessor } from "livekit-client
 import { DenoiseOptions } from "./options";
 export type DenoiseFilterOptions = DenoiseOptions;
 
-const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@983b66599aa3265d915d5733b2c12e6a1a227e8e/dist/DenoiserWorklet.js";
-const rnnoiseCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@983b66599aa3265d915d5733b2c12e6a1a227e8e/dist/rnnoise.wasm";
+const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@5866aaf08ab4d8d8b4acc14e87246d1b3ae0a907/dist/DenoiserWorklet.js";
+const rnnoiseCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@5866aaf08ab4d8d8b4acc14e87246d1b3ae0a907/dist/rnnoise.wasm";
 
 export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions> {
   private static readonly loadedContexts = new WeakSet<BaseAudioContext>();
@@ -106,14 +106,14 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
 
     // Fetch the rnnoise binary from cdn
     const resp = await fetch(rnnoiseCDNURL);
-    const content = await resp.blob();
+    const content = await resp.arrayBuffer();
 
     // process node
     this.denoiseNode = new AudioWorkletNode(ctx, "DenoiserWorklet", {
       processorOptions: {
         debugLogs: this.filterOpts?.debugLogs,
         vadLogs: this.filterOpts?.vadLogs,
-        rnnoiseBlob: content,
+        rnnoiseBuffer: content,
       },
       numberOfInputs: 1,
       numberOfOutputs: 1,
