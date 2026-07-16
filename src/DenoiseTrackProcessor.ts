@@ -8,7 +8,7 @@ const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-proce
 export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions> {
   private static readonly loadedContexts = new WeakSet<BaseAudioContext>();
 
-  readonly name = "denoise-filter";
+  readonly name = "rnnoise-denoise-filter";
   processedTrack?: MediaStreamTrack | undefined;
   private audioOpts?: AudioProcessorOptions | undefined;
   private filterOpts?: DenoiseFilterOptions | undefined;
@@ -124,7 +124,6 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
       numberOfOutputs: 1,
     });
 
-    this.audioOpts.track.applyConstraints({ sampleRate: { exact: 48000 } });
     // source node
     this.orgSourceNode = ctx.createMediaStreamSource(new MediaStream([this.audioOpts.track]));
     // source node==>process node
