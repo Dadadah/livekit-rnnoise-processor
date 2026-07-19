@@ -1,6 +1,5 @@
-export class DenoiseOptions {
+export class RNNoiseOptions {
   debugLogs?: boolean = false;
   vadLogs?: boolean = false;
-  bufferOverflowMs?: number = 0;
   workletCDNURL?: string;
 }

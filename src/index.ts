@@ -1,5 +1,3 @@
-import { DenoiseTrackProcessor, type DenoiseFilterOptions } from "./DenoiseTrackProcessor"
-
-export { DenoiseTrackProcessor }
-
-export type { DenoiseFilterOptions }
+export * from "./RNNoiseTrackProcessor";
+export * from "./options";
+export * from "./RNNoiseNode";
