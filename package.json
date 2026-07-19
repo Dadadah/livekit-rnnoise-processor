@@ -13,10 +13,11 @@
   "types": "lib/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "build:dockerimage": "docker image inspect -f '.' emscripten-autotools-4.0.23 || docker build -t emscripten-autotools-4.0.23 .",
-    "build:emscripten": "docker run --rm -v $(pwd):/src emscripten-autotools-4.0.23 bash -x ./build.sh",
+    "build:dockerimage": "docker build -t emscripten-sdk .",
+    "build:emscripten": "docker run --rm -v $(pwd):/src emscripten-sdk bash -x ./build.sh",
     "build:rnnoise": "pnpm run build:dockerimage && pnpm run build:emscripten",
-    "build:worklet": "pnpm run build:rnnoise && cd worklet && rollup -c && cd .. && cp worklet/dist/rnnoise.wasm dist/rnnoise.wasm",
+    "build:workletthin": "cd worklet && rollup -c",
+    "build:worklet": "pnpm run build:rnnoise && pnpm run build:workletthin && cp worklet/dist/rnnoise.wasm dist/rnnoise.wasm",
     "test": "NODE_OPTIONS='$NODE_OPTIONS --experimental-vm-modules' jest"
   },
   "files": [

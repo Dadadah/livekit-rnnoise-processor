@@ -2,7 +2,7 @@
 
 set -e
 
-export OPTIMIZE=""
+export OPTIMIZE="-O3"
 export LDFLAGS=${OPTIMIZE}
 export CFLAGS=${OPTIMIZE}
 export CXXFLAGS=${OPTIMIZE}
@@ -56,6 +56,7 @@ echo "============================================="
     -s EXPORT_NAME=${MODULE_CREATE_NAME} \
     -s EXPORTED_FUNCTIONS="${RNN_EXPORTED_FUNCTIONS}" \
     -s EXPORTED_RUNTIME_METHODS="${EXPORTED_RUNTIME_METHODS}" \
+    -s STACK_SIZE=131072 \
     .libs/librnnoise.${SO_SUFFIX} \
     -o ./$ENTRY_POINT.js
 

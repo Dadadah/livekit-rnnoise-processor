@@ -19,9 +19,8 @@ class DenoiserWorklet extends AudioWorkletProcessor {
 
   private _queueSize: number = 4;
 
-  private _inputBuffer: number[] = [];
   private _outputBuffer: number[] = [];
-  private _frameBuffer: Float32Array = new Float32Array(RNNOISE_SAMPLE_LENGTH);
+  private _frameBufferIndex: number = 0;
   private _destroyed: boolean = false;
   private _debugLogs: boolean = false;
   private _vadLogs: boolean = false;
@@ -83,18 +82,11 @@ class DenoiserWorklet extends AudioWorkletProcessor {
   }
 
   removeNoise() {
+    if (!this._shouldDenoise) return;
     if (this._rnWasmInterface) {
-      let ptr = this._rnPtr;
-      let st = this._rnContext;
-      for (let i = 0; i < RNNOISE_SAMPLE_LENGTH; i++) {
-        this._rnWasmInterface.HEAPF32[(ptr >> 2) + i] = this._frameBuffer[i] * SHIFT_16_BIT_NR;
-      }
-      const vadResult = this._rnWasmInterface._rnnoise_process_frame(st, ptr, ptr);
+      const vadResult = this._rnWasmInterface._rnnoise_process_frame(this._rnContext, this._rnPtr, this._rnPtr);
       if (this._debugLogs && this._vadLogs) {
         console.log("DenoiserWorklet.process vad:", vadResult);
-      }
-      for (let i = 0; i < RNNOISE_SAMPLE_LENGTH; i++) {
-        this._frameBuffer[i] = this._rnWasmInterface.HEAPF32[(ptr >> 2) + i] / SHIFT_16_BIT_NR;
       }
     } else {
       console.error("DenoiserWorklet tried to process noise without the rnnoise wasm module");
@@ -115,31 +107,34 @@ class DenoiserWorklet extends AudioWorkletProcessor {
     const input = inputs[0];
     const output = outputs[0];
 
+    if (this._debugLogs) {
+      if (!input || !output || !input[0] || !output[0] || input.length != output.length || input[0].length != output[0].length) {
+        console.log("Inputs or outputs were not as expected:", input, output);
+      }
+    }
+
     if (!input[0]) {
       return true;
     }
 
     // Drain the first channel of the input into the buffer
-    this._inputBuffer.push(...this._inputResampler.resample(input[0]));
+    const inputResampled = this._inputResampler.resample(input[0]);
 
-    if (this._inputBuffer.length >= RNNOISE_SAMPLE_LENGTH) {
-      if (this._shouldDenoise) {
-        // Pull the first 480 samples out of the input buffer and put it into the frame buffer
-        for (let i = 0; i < RNNOISE_SAMPLE_LENGTH; i++) {
-          this._frameBuffer[i] = this._inputBuffer[i];
-        }
-
+    for (const sample of inputResampled) {
+      // Add sample
+      this._rnWasmInterface.HEAPF32[(this._rnPtr >> 2) + this._frameBufferIndex] = sample * SHIFT_16_BIT_NR;
+      this._frameBufferIndex++;
+      // If we have enough samples
+      if (this._frameBufferIndex >= RNNOISE_SAMPLE_LENGTH) {
         this.removeNoise();
-
-        // Push the frame buffer into the output buffer
-        // Frame buffer can exist afterwards as it will be overwritten. Saves memory.
-        this._outputBuffer.push(...this._outputResampler.resample(this._frameBuffer));
-      } else {
-        // copy orginal data
-        this._outputBuffer.push(...this._inputBuffer.slice(0, RNNOISE_SAMPLE_LENGTH));
+        // Frame buffer will have either been overwritten with rnnoise output, or it would be unchanged
+        // therefore we can safely push frame buffer to output buffer
+        this._outputBuffer.push(
+          ...this._outputResampler.resample(this._rnWasmInterface.HEAPF32.slice(this._rnPtr >> 2, (this._rnPtr >> 2) + RNNOISE_SAMPLE_LENGTH).map((val) => val / SHIFT_16_BIT_NR)),
+        );
+        // Reset index
+        this._frameBufferIndex = 0;
       }
-      // Slice the input buffer afterwards
-      this._inputBuffer = this._inputBuffer.slice(RNNOISE_SAMPLE_LENGTH);
     }
 
     if (this._outputBuffer.length >= output[0].length) {
@@ -149,6 +144,12 @@ class DenoiserWorklet extends AudioWorkletProcessor {
         }
       });
       this._outputBuffer = this._outputBuffer.slice(output[0].length);
+    }
+
+    if (this._debugLogs) {
+      if (output[0].length !== 128) {
+        console.log("Output length was not 128 it was", output[0].length);
+      }
     }
 
     return true;
@@ -177,7 +178,6 @@ class DenoiserWorklet extends AudioWorkletProcessor {
 
     this.port.close();
     this._outputBuffer = [];
-    this._inputBuffer = [];
     this._inputResampler = undefined;
     this._outputResampler = undefined;
   }
