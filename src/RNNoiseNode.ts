@@ -4,7 +4,7 @@ const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-proce
 
 let wasmBytes: ArrayBuffer;
 
-export default class RNNoiseNode extends AudioWorkletNode {
+export class RNNoiseNode extends AudioWorkletNode {
   static async loadModule(ctx: AudioContext, cdn?: string) {
     let url = defaultCDNURL + "RNNoiseWorklet.js";
     if (cdn) {

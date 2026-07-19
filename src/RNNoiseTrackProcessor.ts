@@ -1,7 +1,7 @@
 import { Track } from "livekit-client";
 import type { AudioProcessorOptions, Room, TrackProcessor } from "livekit-client";
 import { RNNoiseOptions } from "./options";
-import RNNoiseNode from "./RNNoiseNode";
+import { RNNoiseNode } from "./RNNoiseNode";
 
 export class RNNoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions> {
   readonly name = "rnnoise-track-processor";
