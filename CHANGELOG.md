@@ -7,6 +7,7 @@
 Add RNNoiseNode, an audio node that will reduce noise. The track processor will now use this node.
 Optimizations on RNNoise WASM, buildable with `-O3` now.
 Significantly better worklet performance, on my machine processing a frame went from about 0.8ms to 0.16ms.
+Improved worklet build process
 
 ### Breaking Changes
 

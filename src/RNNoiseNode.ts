@@ -1,6 +1,6 @@
 import { RNNoiseOptions } from "./options";
 
-const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@f014bc339da67f4aa60066832839fbb09151db03/dist/";
+const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@5edbd8a06a95c2c1736d38458ed34793e8d90bae/dist/";
 
 let wasmBytes: ArrayBuffer;
 
