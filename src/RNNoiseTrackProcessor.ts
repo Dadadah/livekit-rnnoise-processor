@@ -1,23 +1,22 @@
 import { Track } from "livekit-client";
 import type { AudioProcessorOptions, Room, TrackProcessor } from "livekit-client";
-import { DenoiseOptions } from "./options";
-export type DenoiseFilterOptions = DenoiseOptions;
+import { RNNoiseOptions } from "./options";
+import { RNNoiseNode } from "./RNNoiseNode";
 
-const defaultCDNURL = "https://cdn.jsdelivr.net/gh/dadadah/livekit-rnnoise-processor@860d8053d4917389dfdebb20d88d0bb6ce950bda/dist/";
-
-export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions> {
-  private static readonly loadedContexts = new WeakSet<BaseAudioContext>();
-
-  readonly name = "rnnoise-denoise-filter";
+/**
+ * A livekit track processor that reduces noise in a voice stream with RNNoise.
+ */
+export class RNNoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions> {
+  readonly name = "rnnoise-track-processor";
   processedTrack?: MediaStreamTrack | undefined;
   private audioOpts?: AudioProcessorOptions | undefined;
-  private filterOpts?: DenoiseFilterOptions | undefined;
+  private filterOpts?: RNNoiseOptions | undefined;
   private denoiseNode?: AudioWorkletNode | undefined;
   private orgSourceNode?: MediaStreamAudioSourceNode | undefined;
   private enabled: boolean = true;
 
-  constructor(options?: DenoiseFilterOptions) {
-    this.filterOpts = options ?? new DenoiseOptions();
+  constructor(options?: RNNoiseOptions) {
+    this.filterOpts = options ?? new RNNoiseOptions();
   }
 
   static isSupported(): boolean {
@@ -26,8 +25,10 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
 
   async init(opts: AudioProcessorOptions): Promise<void> {
     if (this.filterOpts?.debugLogs) {
-      console.log("DenoiseTrackProcessor.init", opts);
+      console.log("RNNoiseTrackProcessor.init", opts);
     }
+    await RNNoiseNode.loadModule(opts.audioContext, this.filterOpts?.workletCDNURL);
+
     await this._initInternal(opts, false);
   }
 
@@ -36,26 +37,26 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
     opts.audioContext = opts.audioContext ?? this.audioOpts?.audioContext;
 
     if (this.filterOpts?.debugLogs) {
-      console.log("DenoiseTrackProcessor.restart", opts);
+      console.log("RNNoiseTrackProcessor.restart", opts);
     }
     await this._initInternal(opts, true);
   }
 
   async onPublish(room: Room): Promise<void> {
     if (this.filterOpts?.debugLogs) {
-      console.log("DenoiseTrackProcessor.onPublish", room.name);
+      console.log("RNNoiseTrackProcessor.onPublish", room.name);
     }
   }
 
   async onUnpublish(): Promise<void> {
     if (this.filterOpts?.debugLogs) {
-      console.log("DenoiseTrackProcessor.onUnpublish");
+      console.log("RNNoiseTrackProcessor.onUnpublish");
     }
   }
 
   async setEnabled(enable: boolean): Promise<void> {
     if (this.filterOpts?.debugLogs) {
-      console.log("DenoiseTrackProcessor.setEnabled", enable);
+      console.log("RNNoiseTrackProcessor.setEnabled", enable);
     }
 
     if (this.denoiseNode) {
@@ -74,7 +75,7 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
 
   async destroy(): Promise<void> {
     if (this.filterOpts?.debugLogs) {
-      console.log("DenoiseTrackProcessor.destroy");
+      console.log("RNNoiseTrackProcessor.destroy");
     }
 
     this._closeInternal();
@@ -92,37 +93,8 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
     this.audioOpts = opts;
     const ctx = this.audioOpts.audioContext;
 
-    if (!DenoiseTrackProcessor.loadedContexts.has(ctx)) {
-      let url;
-      if (!this.filterOpts?.workletCDNURL) {
-        url = defaultCDNURL + "DenoiserWorklet.js";
-      } else {
-        url = this.filterOpts.workletCDNURL + "DenoiserWorklet.js";
-      }
-      await ctx.audioWorklet.addModule(new URL(url));
-      DenoiseTrackProcessor.loadedContexts.add(ctx);
-    }
-
-    // Fetch the rnnoise binary from cdn
-    let url;
-    if (!this.filterOpts?.workletCDNURL) {
-      url = defaultCDNURL + "rnnoise.wasm";
-    } else {
-      url = this.filterOpts.workletCDNURL + "rnnoise.wasm";
-    }
-    const resp = await fetch(url);
-    const content = await resp.arrayBuffer();
-
     // process node
-    this.denoiseNode = new AudioWorkletNode(ctx, "DenoiserWorklet", {
-      processorOptions: {
-        debugLogs: this.filterOpts?.debugLogs,
-        vadLogs: this.filterOpts?.vadLogs,
-        rnnoiseBuffer: content,
-      },
-      numberOfInputs: 1,
-      numberOfOutputs: 1,
-    });
+    this.denoiseNode = new RNNoiseNode(ctx, this.filterOpts);
 
     // source node
     this.orgSourceNode = ctx.createMediaStreamSource(new MediaStream([this.audioOpts.track]));
@@ -137,7 +109,7 @@ export class DenoiseTrackProcessor implements TrackProcessor<Track.Kind.Audio, A
     this.processedTrack = destination.stream.getAudioTracks()[0];
 
     if (this.filterOpts?.debugLogs) {
-      console.log(`DenoiseTrackProcessor.init: sourceID: ${this.audioOpts.track.id}, newTrackID: ${this.processedTrack.id}`);
+      console.log(`RNNoiseTrackProcessor.init: sourceID: ${this.audioOpts.track.id}, newTrackID: ${this.processedTrack.id}`);
     }
   }
 

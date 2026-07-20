@@ -1,5 +1,5 @@
 import createRNNWasmModule from "./dist/rnnoise.js";
-import MonoResampler from "./MonoResampler";
+import MonoResampler from "./MonoResampler.js";
 
 const RNNOISE_SAMPLE_LENGTH = 480;
 const SHIFT_16_BIT_NR = 32768;
@@ -11,7 +11,7 @@ interface IRnnoiseModule extends EmscriptenModule {
   _rnnoise_process_frame: (context: number, output: number, input: number) => number;
 }
 
-class DenoiserWorklet extends AudioWorkletProcessor {
+class RNNoiseWorklet extends AudioWorkletProcessor {
   private _rnWasmInterface: IRnnoiseModule | undefined;
 
   private _rnContext: number = 0;
@@ -39,7 +39,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
     }
 
     if (this._debugLogs) {
-      console.log("DenoiserWorklet.constructor options:", options);
+      console.log("RNNoiseWorklet.constructor options:", options);
     }
 
     this._inputResampler = new MonoResampler(sampleRate, RNNOISE_REQUIRED_SAMPLE_RATE, RNNOISE_SAMPLE_LENGTH * 2);
@@ -49,7 +49,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
 
     const rnnoiseBuffer: ArrayBuffer = options.processorOptions?.rnnoiseBuffer;
     if (!rnnoiseBuffer) {
-      throw "DenoiserWorklet must be initialized with an rnnoise array buffer!";
+      throw "RNNoiseWorklet must be initialized with an rnnoise array buffer!";
     }
     const instantiateWasm = async (info: WebAssembly.Imports | undefined, successCallback: (instance: WebAssembly.Instance, module: WebAssembly.Module) => {}) => {
       let module = new WebAssembly.Module(rnnoiseBuffer);
@@ -69,11 +69,11 @@ class DenoiserWorklet extends AudioWorkletProcessor {
       this._rnPtr = this._rnWasmInterface._malloc(RNNOISE_SAMPLE_LENGTH * this._queueSize);
 
       if (this._debugLogs) {
-        console.log("DenoiserWorklet context:", this._rnContext);
+        console.log("RNNoiseWorklet context:", this._rnContext);
       }
     } catch (error) {
       if (this._debugLogs) {
-        console.error("DenoiserWorklet.constructor error", error);
+        console.error("RNNoiseWorklet.constructor error", error);
       }
       // release can be called even if not all the components were initialized.
       this.destroy();
@@ -86,10 +86,10 @@ class DenoiserWorklet extends AudioWorkletProcessor {
     if (this._rnWasmInterface) {
       const vadResult = this._rnWasmInterface._rnnoise_process_frame(this._rnContext, this._rnPtr, this._rnPtr);
       if (this._debugLogs && this._vadLogs) {
-        console.log("DenoiserWorklet.process vad:", vadResult);
+        console.log("RNNoiseWorklet.process vad:", vadResult);
       }
     } else {
-      console.error("DenoiserWorklet tried to process noise without the rnnoise wasm module");
+      console.error("RNNoiseWorklet tried to process noise without the rnnoise wasm module");
     }
   }
 
@@ -159,7 +159,7 @@ class DenoiserWorklet extends AudioWorkletProcessor {
     // Attempting to release a non initialized processor, do nothing.
     if (this._destroyed) {
       if (this._debugLogs) {
-        console.log("Destroying an already destroyed DenoiserWorklet.");
+        console.log("Destroying an already destroyed RNNoiseWorklet.");
       }
       return;
     }
@@ -188,15 +188,15 @@ class DenoiserWorklet extends AudioWorkletProcessor {
         this._shouldDenoise = event.data.enable ?? this._shouldDenoise;
 
         if (this._debugLogs) {
-          console.log("DenoiserWorklet.SET_ENABLED: ", this._shouldDenoise);
+          console.log("RNNoiseWorklet.SET_ENABLED: ", this._shouldDenoise);
         }
-      } else if (event.data.message === "DESTORY" || event.data.message === "DESTROY") {
+      } else if (event.data.message === "DESTROY") {
         if (this._debugLogs) {
-          console.log("DenoiserWorklet.DESTROY");
+          console.log("RNNoiseWorklet.DESTROY");
         }
         this.destroy();
       }
     };
   }
 }
-registerProcessor("DenoiserWorklet", DenoiserWorklet);
+registerProcessor("RNNoiseWorklet", RNNoiseWorklet);
