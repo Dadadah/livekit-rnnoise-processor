@@ -18,7 +18,7 @@ export class RNNoiseNode extends AudioWorkletNode {
    */
   static async loadModule(ctx: AudioContext, cdn?: string) {
     let url = defaultCDNURL + "RNNoiseWorklet.js";
-    if (cdn) {
+    if (cdn && cdn.length > 0 && cdn.endsWith("/")) {
       url = cdn + "RNNoiseWorklet.js";
     }
     await ctx.audioWorklet.addModule(new URL(url));
