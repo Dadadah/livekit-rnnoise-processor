@@ -1,3 +1,13 @@
+## 3.0.2
+
+### Fix
+
+If CDN was an empty string, the RNNoiseNode would fail to initialize. It will now default to the build in CDN if the string is empty or doesn't end in a `/`.
+
+## 3.0.1
+
+Identical to 3.0.0, I made a mistake when publishing the package.
+
 ## 3.0.0
 
 ### New
